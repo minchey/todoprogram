@@ -8,7 +8,7 @@ import java.sql.Statement;
 public class Database {
     private static String DB_URL = "jdbc:sqlite:todo.db";    // Java Database Connectivity - 자바와 db가 통신 : 어떤db쓸건지 : 파일경로
 
-    private static Connection getConnection() throws SQLException{
+    public static Connection getConnection() throws SQLException{
         return DriverManager.getConnection(DB_URL);
     }
 
