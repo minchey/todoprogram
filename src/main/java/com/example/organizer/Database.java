@@ -12,7 +12,7 @@ public class Database {
         return DriverManager.getConnection(DB_URL);
     }
 
-    private static void migrate(){
+    public static void migrate(){
         String sql = """
                 CREATE TABLE IF NOT EXISTS tasks(
                     id              INTEGER PRIMARY KEY AUTOINCREMENT, 
@@ -21,7 +21,7 @@ public class Database {
                     due_at          TEXT,
                     is_recurring    INTEGER DEFAULT 0,
                     next_fire_at    TEXT,
-                    create_at       TEXT DEFAULT CURRENT_TIMESTAMP
+                    created_at       TEXT DEFAULT CURRENT_TIMESTAMP
                 )
                 """;
         try (Connection conn = getConnection();

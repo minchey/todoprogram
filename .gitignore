@@ -12,6 +12,9 @@ build/
 *.iws
 *.iml
 *.ipr
+*.db
+*.db-shm
+*.db-wal
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/

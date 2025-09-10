@@ -9,6 +9,7 @@ import javafx.scene.control.Label;      // UI 요소 중 하나: 텍스트 표�
 public class App extends Application{
     @Override
     public void start(Stage stage){
+        Database.migrate();
         // JavaFX가 프로그램 실행 시 자동으로 호출하는 메서드
         // stage: 최상위 창(윈도우)
         Label label = new Label("Hello Organizer!");     // 화면에 보일 텍스트 라벨 하나 생성
