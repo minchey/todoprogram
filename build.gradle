@@ -1,0 +1,31 @@
+plugins {
+    id 'application'  //실행 가능한 앱
+    id 'org.openjfx.javafxplugin' version '0.1.0' //JavaFX 플러그인
+}
+
+repositories{
+    mavenCentral() //라이브러리 내려받는 중앙소
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21) // JDK 23 사용
+    }
+}
+
+
+application {
+    mainClass = 'com.example.organizer.App'  // JavaFX 엔트리포인트(바꿔 쓰세요)
+}
+
+
+javafx {
+    version = '21.0.4'                       // JavaFX 런타임 버전
+    modules = [ 'javafx.controls', 'javafx.fxml' ]   // 필요한 모듈만 로드
+}
+
+
+dependencies {
+    implementation 'org.xerial:sqlite-jdbc:3.46.0.1' // SQLite 드라이버 (JDBC)
+    // 필요 시 로깅 등 추가: implementation 'ch.qos.logback:logback-classic:1.5.6'
+}
