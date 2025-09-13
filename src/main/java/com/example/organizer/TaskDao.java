@@ -233,6 +233,81 @@ public class TaskDao {
         // 날짜별 할 일 개수 반환
         return map;
     }
+
+    /**
+     * 반복 업무 저장 (주간 반복)
+     *
+     * @param title         제목 (필수)
+     * @param priority      우선순위 (1=중요, 2=보통, 3=낮음)
+     * @param daysMask      요일 비트마스크 (일=bit0 … 토=bit6) — 최소 1비트는 켜져 있어야 함
+     * @param recurStart    반복 시작일 ("YYYY-MM-DD")
+     * @param recurUntil    반복 종료일 (없으면 null → 무기한)
+     * @param intervalWeeks 몇 주 간격으로 반복할지 (기본 1주)
+     * @param timeHHmm      시간 문자열 ("HH:mm" 권장, 비우면 종일) — 지금 단계에선 저장만, 트리거 계산은 다음 단계
+     */
+    public void addRecurringTask(String title,
+                                 int priority,
+                                 int daysMask,
+                                 String recurStart,
+                                 String recurUntil,
+                                 int intervalWeeks,
+                                 String timeHHmm) {
+
+        // --- 1) 입력값 가벼운 검증 ---
+        if (title == null || title.trim().isEmpty()) {
+            throw new IllegalArgumentException("제목(title)은 필수입니다.");
+        }
+        if (priority < 1 || priority > 3) {
+            throw new IllegalArgumentException("priority는 1~3 범위여야 합니다.");
+        }
+        if (daysMask == 0) {
+            throw new IllegalArgumentException("반복 요일(daysMask)이 최소 하나는 선택되어야 합니다.");
+        }
+        if (recurStart == null || recurStart.isBlank()) {
+            throw new IllegalArgumentException("recurStart(반복 시작일)은 필수입니다. 예) 2025-09-14");
+        }
+        if (intervalWeeks < 1) {
+            intervalWeeks = 1; // 방어적 기본값
+        }
+
+        // --- 2) INSERT SQL (is_recurring=1, due_at/next_fire_at은 지금은 NULL로 둠) ---
+        final String sql = """
+        INSERT INTO tasks
+            (title, priority, is_recurring, recur_days, recur_start, recur_until, recur_interval, due_at, next_fire_at)
+        VALUES
+            (?,     ?,        1,           ?,          ?,          ?,           ?,             NULL,  NULL)
+        """;
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            int i = 1;
+            ps.setString(i++, title);
+            ps.setInt(i++, priority);
+            ps.setInt(i++, daysMask);
+            ps.setString(i++, recurStart);
+
+            // recur_until 은 null 가능
+            if (recurUntil != null && !recurUntil.isBlank()) {
+                ps.setString(i++, recurUntil);
+            } else {
+                ps.setNull(i++, Types.VARCHAR);
+            }
+
+            ps.setInt(i++, intervalWeeks);
+
+            // 실행
+            ps.executeUpdate();
+            System.out.println("[DB] 반복 업무 추가 완료: title=" + title +
+                    ", mask=" + daysMask + ", start=" + recurStart +
+                    (recurUntil != null ? ", until=" + recurUntil : "") +
+                    ", every " + intervalWeeks + " week(s)");
+
+        } catch (SQLException e) {
+            throw new RuntimeException("addRecurringTask 실패: " + e.getMessage(), e);
+        }
+    }
+
 }
 
 
