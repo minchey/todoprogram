@@ -308,6 +308,35 @@ public class TaskDao {
         }
     }
 
+    /**
+     * 특정 날짜에 반복업무가 있는지 확인
+     */
+    public boolean hasRecurringOn(LocalDate date) {
+        String sql = """
+        SELECT COUNT(*) FROM tasks
+        WHERE is_recurring = 1
+          AND (recur_start IS NULL OR recur_start <= ?)
+          AND (recur_until IS NULL OR recur_until >= ?)
+    """;
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            String ymd = date.toString(); // "YYYY-MM-DD"
+            ps.setString(1, ymd);
+            ps.setString(2, ymd);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1) > 0;
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
 }
 
 

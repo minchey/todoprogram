@@ -119,6 +119,12 @@ public class App extends Application {
             Label dot = new Label(cnt > 0 ? "●".repeat(Math.min(cnt, 3)) : "");
             dot.setStyle("-fx-opacity: 0.7; -fx-font-size: 10px;");
 
+
+            // 🔴 반복 업무가 있는지 확인해서 빨간 동그라미 표시
+            boolean hasRecurring = dao.hasRecurringOn(date);
+            Label recurDot = new Label(hasRecurring ? "●" : "");
+            recurDot.setStyle("-fx-text-fill: red; -fx-font-size: 10px;");
+
             // 날짜 셀 (VBox: 날짜 + 점)
             VBox cell = new VBox(4, btn, dot);
             cell.setAlignment(Pos.TOP_CENTER);
