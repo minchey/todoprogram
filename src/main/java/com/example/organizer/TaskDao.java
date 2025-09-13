@@ -315,6 +315,7 @@ public class TaskDao {
         String sql = """
         SELECT COUNT(*) FROM tasks
         WHERE is_recurring = 1
+          AND (recur_days & ?) != 0            -- 요일 비트가 겹치면 true
           AND (recur_start IS NULL OR recur_start <= ?)
           AND (recur_until IS NULL OR recur_until >= ?)
     """;
@@ -322,19 +323,108 @@ public class TaskDao {
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
-            String ymd = date.toString(); // "YYYY-MM-DD"
-            ps.setString(1, ymd);
+            // DayOfWeek: 월=1 … 일=7  → 일=bit0, 월=bit1 … 토=bit6 으로 매핑
+            int dow = date.getDayOfWeek().getValue();   // 1~7 (월~일)
+            int dowMask = 1 << (dow % 7);               // 월(1)->2, … 일(7%7=0)->1
+
+            String ymd = date.toString();               // "YYYY-MM-DD"
+            ps.setInt(1, dowMask);
             ps.setString(2, ymd);
+            ps.setString(3, ymd);
 
             try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getInt(1) > 0;
-                }
+                return rs.next() && rs.getInt(1) > 0;
             }
         } catch (SQLException e) {
             e.printStackTrace();
+            return false;
         }
-        return false;
+    }
+
+
+    /**
+     * 특정 날짜(YYYY-MM-DD)에 "반복 업무"가 해당되는 목록을 조회한다.
+     *
+     * 동작 요약
+     * 1) 날짜의 요일을 구한다 (Java: 월=1 … 일=7)
+     * 2) DB에 저장된 반복 요일 비트마스크(recur_days)와 & 연산으로 일치 여부를 판단
+     *    - 비트 규칙: 일=bit0, 월=bit1, … 토=bit6  (예: 월/수/금 → 0b0101010 = 42)
+     * 3) 반복 유효 기간(recur_start ≤ date ≤ recur_until)도 함께 필터링
+     * 4) 일치하는 반복 업무들의 최소 필드(id, title, priority, is_recurring)를 Task로 구성해 반환
+     *
+     * @param date 확인할 날짜 (예: LocalDate.of(2025, 9, 15))
+     * @return 해당 날짜에 반복 규칙과 기간이 맞는 Task 목록(반복 업무만)
+     */
+    public List<Task> listRecurringByDate(LocalDate date) {
+        // 조회 결과를 담을 리스트 준비
+        List<Task> out = new ArrayList<>();
+
+        // (A) 이 날짜의 요일 비트 준비 -----------------------------
+        // Java 요일값: 월=1, 화=2, … 일=7
+        int javaDow = date.getDayOfWeek().getValue();
+
+        // 비트 인덱스 변환:
+        //  - 우리가 정한 비트 규칙은 "일=bit0, 월=bit1, … 토=bit6"
+        //  - Java의 일요일 값은 7이므로, 7 % 7 = 0 으로 만들어 bit0에 매핑
+        //  - 월(1)→1%7=1→bit1, 화(2)→bit2 … 토(6)→bit6
+        int maskBitIndex = javaDow % 7;
+
+        // 최종 요일 마스크: 해당 날짜의 요일에 해당하는 1비트만 켠 값
+        //  예) 월요일이면 1<<1 = 0b10(2), 일요일이면 1<<0 = 0b1(1)
+        int dowMask = 1 << maskBitIndex;
+
+        // (B) 하루 문자열(YYYY-MM-DD) 준비 → 기간 비교에 사용
+        String ymd = date.toString();
+
+        // (C) 반복 업무 조회 SQL -----------------------------------
+        //  - is_recurring = 1 : 반복 업무만
+        //  - (recur_days & ?) != 0 : 요일 비트가 겹치는(해당 요일에 수행되는) 것만
+        //  - 기간 조건: 시작일이 비어있거나 시작일 ≤ date, 종료일이 비어있거나 date ≤ 종료일
+        final String sql = """
+        SELECT id, title, priority, is_recurring
+        FROM tasks
+        WHERE is_recurring = 1
+          AND (recur_days & ?) != 0
+          AND (recur_start IS NULL OR recur_start <= ?)
+          AND (recur_until IS NULL OR recur_until >= ?)
+        ORDER BY priority ASC, title ASC
+    """;
+
+        // (D) DB 연결/실행 -----------------------------------------
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            // 바인딩 #1: 요일 비트마스크
+            ps.setInt(1, dowMask);
+
+            // 바인딩 #2, #3: 기간 필터에 사용할 날짜 문자열(YYYY-MM-DD)
+            ps.setString(2, ymd); // recur_start ≤ date
+            ps.setString(3, ymd); // date ≤ recur_until
+
+            // 실행 및 결과 매핑
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Task t = new Task();
+
+                    // 필요한 최소 필드만 매핑 (UI에 제목/우선순위/반복태그를 보여주기 위함)
+                    t.id          = rs.getInt("id");
+                    t.title       = rs.getString("title");
+                    t.priority    = rs.getInt("priority");
+                    t.isRecurring = rs.getInt("is_recurring"); // 1 고정
+
+                    // 필요하면 여기서 추가 필드도 매핑 가능:
+                    //   recur_days, recur_start, recur_until, recur_interval 등
+
+                    out.add(t);
+                }
+            }
+
+        } catch (SQLException e) {
+            // 실사용에선 로깅 권장. 여기서는 콘솔에 출력 후 빈 목록 반환.
+            e.printStackTrace();
+        }
+
+        return out;
     }
 
 }
