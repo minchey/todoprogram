@@ -1,9 +1,6 @@
 package com.example.organizer;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.sql.Types;
+import java.sql.*;
 
 public class TaskDao {
 
@@ -71,6 +68,27 @@ public class TaskDao {
 
         }catch(SQLException e){
             e.printStackTrace();
+        }
+    }
+
+    public void deleteTask(Task task){
+        if (task == null || task.id == 0) {
+            throw new IllegalArgumentException("삭제할 Task의 id가 필요합니다.");
+        }
+        String sql = "DELETE FROM task WHERE = id=?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setInt(1, task.id);
+            int rows = ps.executeUpdate();
+            if (rows == 0) {
+                System.out.println("[DB] 삭제할 행이 없습니다. id=" + task.id);
+            } else {
+                System.out.println("[DB] Task 삭제 완료. id=" + task.id);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("deleteTask 실패: " + e.getMessage(), e);
         }
     }
 }
