@@ -126,7 +126,7 @@ public class App extends Application {
             recurDot.setStyle("-fx-text-fill: red; -fx-font-size: 10px;");
 
             // 날짜 셀 (VBox: 날짜 + 점)
-            VBox cell = new VBox(4, btn, dot);
+            VBox cell = new VBox(4, btn, dot, recurDot);
             cell.setAlignment(Pos.TOP_CENTER);
             cell.setPadding(new Insets(4));
             cell.setStyle("-fx-border-color: #ddd; -fx-background-color: #fafafa;");
