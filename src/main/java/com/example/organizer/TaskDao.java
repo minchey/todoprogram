@@ -40,4 +40,37 @@ public class TaskDao {
             e.printStackTrace();
         }
     }
+
+    public void updateTask(Task task){
+        String sql = "UPDATE tasks SET title = ?, priority =?, due_at =?, is_recurring=?, next_fire_at=? WHERE id=?";
+
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)){
+
+            ps.setString(1,task.title);
+            ps.setInt(2,task.priority);
+
+            if (task.dueAt != null) {
+                ps.setString(3, task.dueAt);
+            } else {
+                ps.setNull(3, java.sql.Types.VARCHAR);
+            }
+
+            ps.setInt(4, task.isRecurring);
+
+            if (task.nextFireAt != null) {
+                ps.setString(5, task.nextFireAt);
+            } else {
+                ps.setNull(5, java.sql.Types.VARCHAR);
+            }
+
+            ps.setInt(6, task.id);
+
+            ps.executeUpdate();
+            System.out.println("[DB] Task 업데이트 완료: " + task.id);
+
+        }catch(SQLException e){
+            e.printStackTrace();
+        }
+    }
 }

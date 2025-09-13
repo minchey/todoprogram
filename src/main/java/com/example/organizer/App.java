@@ -17,6 +17,10 @@ public class App extends Application{
         stage.setScene(scene);                              // stage(윈도우)에 scene(장면)을 붙임
         stage.setTitle("TodoProgram");                      // 창의 제목 표시줄에 보일 문자열 설정
         stage.show();                                       // 실제 화면에 stage(창)를 띄움
+        TaskDao dao = new TaskDao();
+        dao.addTask("보고서 작성", 1, "2025-09-12T09:00"); // 마감 있는 업무
+        dao.addTask("아이디어 메모", 2, null);             // 마감 없는 업무
+
     }
 
     public static void main(String[] args) {
