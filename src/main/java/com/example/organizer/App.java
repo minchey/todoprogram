@@ -106,16 +106,17 @@ public class App extends Application{
     }
 
     //달력 그리기
+    // 월~일 헤더 기준 렌더 (빈칸/레이아웃 깨짐 방지 강화 버전)
     private void renderCalendar(YearMonth ym) {
-        calendarGrid.getChildren().clear(); // 지난 달력 내용 지우기
+        // 1) 기존 내용/제약 초기화 (누적 방지)
+        calendarGrid.getChildren().clear();
         calendarGrid.getColumnConstraints().clear();
         calendarGrid.getRowConstraints().clear();
 
-
-        // 날짜별 할 일 개수 맵 (점 표시용)
+        // 2) 날짜별 할 일 개수(점 표시용) 미리 가져오기
         Map<LocalDate, Integer> counts = dao.getDailyCountsForMonth(ym);
 
-        // 요일 헤더
+        // 3) 요일 헤더 (0행)
         String[] wk = {"월","화","수","목","금","토","일"};
         for (int i = 0; i < 7; i++) {
             Label head = new Label(wk[i]);
@@ -123,43 +124,64 @@ public class App extends Application{
             calendarGrid.add(head, i, 0);
         }
 
-        // 이번 달 1일의 요일 계산
+        // 4) 이번 달 1일 위치 계산
         LocalDate first = ym.atDay(1);
-        int firstDow = (first.getDayOfWeek().getValue() + 6) % 7; // 월=0 … 일=6
+        // DayOfWeek.getValue(): 월=1 … 일=7
+        // 우리 헤더가 월~일이므로 월=0 … 일=6 으로 맞춤
+        int firstCol = (first.getDayOfWeek().getValue() + 6) % 7;
 
         int length = ym.lengthOfMonth();
-        int row = 1;
-        int col = firstDow;
+        int row = 1;           // 0행은 요일 헤더, 1행부터 날짜
+        int col = firstCol;
 
-        // 날짜 버튼 + 점
+        // 5) 날짜 셀(버튼 + 점) 채우기
         for (int day = 1; day <= length; day++) {
             LocalDate date = ym.atDay(day);
 
+            // 날짜 버튼
             Button btn = new Button(String.valueOf(day));
             btn.setMaxWidth(Double.MAX_VALUE);
             btn.setPrefHeight(60);
             btn.setOnAction(e -> openDayTasksModal(date));
 
+            // 점(최대 3개)
             int cnt = counts.getOrDefault(date, 0);
             Label dot = new Label(cnt > 0 ? "●".repeat(Math.min(cnt, 3)) : "");
             dot.setStyle("-fx-opacity: 0.7; -fx-font-size: 10px;");
 
+            // 셀 컨테이너
             VBox cell = new VBox(4, btn, dot);
             cell.setAlignment(Pos.TOP_CENTER);
             cell.setPadding(new Insets(4));
             cell.setStyle("-fx-border-color: #ddd; -fx-background-color: #fafafa;");
 
+            // 오늘 날짜 하이라이트
+            if (date.equals(LocalDate.now())) {
+                cell.setStyle("-fx-border-color: #3b82f6; -fx-background-color: #eef5ff;");
+            }
+
             calendarGrid.add(cell, col, row);
 
+            // 다음 칸
             col++;
-            if (col == 7) { col = 0; row++; }
+            if (col == 7) { col = 0; row++; } // 정확히 7에서 줄바꿈
         }
 
-        // 열 균등 분할
+        // 6) 열 제약(1/7 균등) — 매 렌더마다 재설정
         ColumnConstraints cc = new ColumnConstraints();
         cc.setPercentWidth(100.0 / 7.0);
-        calendarGrid.getColumnConstraints().setAll(cc, cc, cc, cc, cc, cc, cc);
+        calendarGrid.getColumnConstraints().addAll(cc, cc, cc, cc, cc, cc, cc);
+
+        // 7) 행 제약(보기 좋은 높이) — 최대 6주 + 헤더 1행
+        RowConstraints rcHeader = new RowConstraints();   // 헤더 행 (기본)
+        calendarGrid.getRowConstraints().add(rcHeader);
+
+        RowConstraints rc = new RowConstraints();
+        rc.setMinHeight(80); // 필요 시 조절
+        // 달이 4~6주라 넉넉히 6개 추가
+        calendarGrid.getRowConstraints().addAll(rc, rc, rc, rc, rc, rc);
     }
+
 
 
     //날짜 클릭시 모달
