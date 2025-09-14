@@ -1,9 +1,7 @@
 name: Windows Build (jlink)
 
 on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+  workflow_dispatch: {}   # 수동 실행 버튼
 
 jobs:
   build-win:
@@ -18,28 +16,21 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          cache: gradle
 
-      - name: Cache Gradle
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
+      - name: Gradle permissions
+        run: git update-index --chmod=+x gradlew
 
       - name: Build runtime image (jlink)
-        shell: bash
+        shell: cmd
         run: |
-          ./gradlew.bat --no-daemon clean jlink
+          .\gradlew.bat --no-daemon clean jlink
 
-      # jlink 결과: build/image/ 아래에 생성
       - name: Zip runtime image
-        shell: bash
+        shell: pwsh
         run: |
           cd build
-          powershell -Command "Compress-Archive -Path image -DestinationPath TodoProgram-windows.zip"
+          Compress-Archive -Path image -DestinationPath TodoProgram-windows.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
