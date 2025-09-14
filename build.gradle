@@ -52,6 +52,7 @@ jlink {
     launcher {
         name = 'TodoProgram'
     }
+    addExtraDependencies("javafx")   // ✅ JavaFX 모듈 자동 추가
     /* 소스에 module-info.java가 없으니 merged module을 만들어 의존 모듈을 명시 */
     mergedModule {
         requires 'java.sql'
