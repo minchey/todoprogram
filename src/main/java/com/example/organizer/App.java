@@ -1,16 +1,40 @@
 package com.example.organizer;
 
+
+// ✅ JavaFX imports (UI 전부)
 import javafx.application.Application;
+import javafx.scene.control.Separator;
+import javafx.scene.control.TextField;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
-import javafx.scene.Scene;
-import javafx.scene.control.*;
-import javafx.scene.layout.*;
-import javafx.stage.Stage;
 
+import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.DatePicker;
+import javafx.scene.control.Label;
+import javafx.scene.control.ListView;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.control.ToggleButton;
+
+import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.ColumnConstraints;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;   // ← HBox.setHgrow(..., Priority.ALWAYS) 때문에 필요
+import javafx.scene.layout.VBox;
+
+import javafx.stage.Stage;             // 모달/다이얼로그 창
+
+// ✅ 자바 표준 라이브러리
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.Map;
+
 
 /**
  * 메인 UI 클래스 (JavaFX Application)
