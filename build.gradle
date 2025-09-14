@@ -13,7 +13,7 @@ java {
     }
 }
 
-/* ---- JavaFX 플랫폼 분기 ---- */
+/* ---- JavaFX 버전/플랫폼별 분기 ---- */
 ext {
     javafxVer = '21.0.4'
     def os = org.gradle.internal.os.OperatingSystem.current()
@@ -23,42 +23,34 @@ ext {
 }
 
 application {
+    // ⚠️ JavaFX App 엔트리포인트 (쓰는 App.class 경로)
     mainClass = 'com.example.organizer.App'
 }
 
-tasks.named('run') {
-    doFirst {
-        jvmArgs = [
-                "--module-path", classpath.asPath,
-                "--add-modules", "javafx.controls,javafx.fxml"
-        ]
-    }
-}
-
-/* ---- 여기 포인트! JavaFX는 base/graphics/controls/fxml 네 개를 모두,
-   각자 플랫폼 classifier와 함께 넣어야 런타임 네이티브가 따라옵니다. ---- */
+/* ---- 핵심 포인트: JavaFX base/graphics/controls/fxml 네 개 모두 + classifier ---- */
 dependencies {
     implementation "org.openjfx:javafx-base:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-graphics:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-controls:${javafxVer}:${javafxClassifier}"
-    //implementation "org.openjfx:javafx-fxml:${javafxVer}:${javafxClassifier}"
+    implementation "org.openjfx:javafx-fxml:${javafxVer}:${javafxClassifier}"
 
     implementation "org.xerial:sqlite-jdbc:3.46.0.1"
 }
 
-/* ---- jlink(선택): 모듈을 직접 안 쓰는(Classpath) 프로젝트라 힌트를 살짝 줍니다. ---- */
+/* ---- 로컬에서 `./gradlew run` 오류나지 않게 (선택사항, 있어도 무해) ---- */
+tasks.named('run') {
+    // jlink로 배포할 땐 상관없지만, run 시에만 도움
+    jvmArgs += ['-Dprism.order=sw']
+}
+
+/* ---- jlink로 런타임 이미지 + 실행파일 생성 ---- */
 jlink {
     options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+
+    // ⬇️ JavaFX 모듈을 merged module에 자동 포함 (윈도우 액션에서 "module not found" 막아줌)
+    addExtraDependencies('javafx')
+
     launcher {
-        name = 'TodoProgram'
-    }
-    addExtraDependencies("javafx")   // ✅ JavaFX 모듈 자동 추가
-    /* 소스에 module-info.java가 없으니 merged module을 만들어 의존 모듈을 명시 */
-    mergedModule {
-        requires 'java.sql'
-        requires 'javafx.base'
-        requires 'javafx.graphics'
-        requires 'javafx.controls'
-        requires 'javafx.fxml'
+        name = 'TodoProgram'   // 결과 bin/TodoProgram(.exe) 이름
     }
 }
