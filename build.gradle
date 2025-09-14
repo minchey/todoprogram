@@ -41,7 +41,7 @@ dependencies {
     implementation "org.openjfx:javafx-base:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-graphics:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-controls:${javafxVer}:${javafxClassifier}"
-    implementation "org.openjfx:javafx-fxml:${javafxVer}:${javafxClassifier}"
+    //implementation "org.openjfx:javafx-fxml:${javafxVer}:${javafxClassifier}"
 
     implementation "org.xerial:sqlite-jdbc:3.46.0.1"
 }
