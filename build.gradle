@@ -3,14 +3,10 @@ plugins {
     id 'org.beryx.jlink' version '3.1.1'
 }
 
-repositories {
-    mavenCentral()
-}
+repositories { mavenCentral() }
 
 java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(21)
-    }
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
 }
 
 /* ---- JavaFX 버전/플랫폼 분기 ---- */
@@ -23,26 +19,36 @@ ext {
 }
 
 application {
-    // JavaFX 엔트리포인트
     mainClass = 'com.example.organizer.App'
 }
 
-/* ---- 핵심 포인트: JavaFX base/graphics/controls만 의존 ----
-   (FXML 안 쓰면 fxml 의존 제거해야 Windows jlink가 안 터짐) */
+/* ---- JavaFX 의존성: base / graphics / controls 만 ----
+   (FXML 안 쓰면 fxml 제거해야 Windows jlink에서 안 터짐) */
 dependencies {
     implementation "org.openjfx:javafx-base:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-graphics:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-controls:${javafxVer}:${javafxClassifier}"
-    // FXML을 실제로 안 쓰면 이 줄은 생략 가능
+    // 만약 FXML 실제 사용시 ↑ 위 3개 + 아래 줄 추가
     // implementation "org.openjfx:javafx-fxml:${javafxVer}:${javafxClassifier}"
 
     implementation "org.xerial:sqlite-jdbc:3.46.0.1"
 }
 
 jlink {
-    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    options = ['--strip-debug','--compress','2','--no-header-files','--no-man-pages']
     launcher { name = 'TodoProgram' }
 
-    // 🔧 JavaFX 모듈들을 jlink가 자동으로 끌어오게 함
+    // 🔧 Windows Runner에서 모듈 못 찾는 문제를 예방
     addExtraDependencies("javafx")
+
+    // (선택) 더 확실히: 자동 생성되는 module-info에 필요한 모듈 명시
+    mergedModule {
+        additive = true
+        requires 'javafx.base'
+        requires 'javafx.graphics'
+        requires 'javafx.controls'
+        // FXML 사용할 때만
+        // requires 'javafx.fxml'
+        requires 'java.sql'
+    }
 }
