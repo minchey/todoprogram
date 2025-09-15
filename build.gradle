@@ -1,23 +1,22 @@
 plugins {
     id 'application'
     id 'org.beryx.jlink' version '3.1.1'
-    id 'org.openjfx.javafxplugin' version '0.1.0'
-
 }
 
-javafx {
-    version = "21.0.4"
-    modules = [ 'javafx.base', 'javafx.graphics', 'javafx.controls' ]
-    // FXML 쓰면 'javafx.fxml' 추가
+repositories {
+    mavenCentral()
 }
 
-repositories { mavenCentral() }
-
+/* Java 21 고정 (로컬/CI 동일) */
 java {
-    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
-/* ---- JavaFX 버전/플랫폼 분기 ---- */
+/* ── JavaFX 버전 + 플랫폼 분기 ──────────────────────────────────────────────
+   mac(aarch64/intel)/win/linux 각각에 맞는 classifier를 자동으로 붙여준다.
+   예) mac-aarch64, mac, win, linux */
 ext {
     javafxVer = '21.0.4'
     def os = org.gradle.internal.os.OperatingSystem.current()
@@ -26,41 +25,53 @@ ext {
             : (os.isWindows() ? "win" : "linux")
 }
 
+/* 앱 엔트리포인트 (JavaFX Application) */
 application {
     mainClass = 'com.example.organizer.App'
 }
 
-/* ---- JavaFX 의존성: base / graphics / controls 만 ----
-   (FXML 안 쓰면 fxml 제거해야 Windows jlink에서 안 터짐) */
+/* ── 핵심: JavaFX 의존 (FXML 안 쓰면 fxml은 빼기) ─────────────────────────── */
 dependencies {
     implementation "org.openjfx:javafx-base:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-graphics:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-controls:${javafxVer}:${javafxClassifier}"
-    // 만약 FXML 실제 사용시 ↑ 위 3개 + 아래 줄 추가
+    // FXML을 실제 사용하면 아래 주석 해제 + jlink mergedModule에도 'javafx.fxml' 추가
     // implementation "org.openjfx:javafx-fxml:${javafxVer}:${javafxClassifier}"
 
-    implementation "org.xerial:sqlite-jdbc:3.46.0.1"
+    implementation "org.xerial:sqlite-jdbc:3.46.0.1"   // JDBC (java.sql 모듈 필요)
 }
 
+/* ── jlink로 런타임 이미지 만들기 ───────────────────────────────────────── */
 jlink {
-    // 실행 파일 이름
-    launcher { name = 'TodoProgram' }
-
-    // 용량 다이어트 옵션(그대로 유지)
+    /* jlink 이미지 최적화 옵션 */
     options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
 
-    // ✅ JavaFX 같은 모듈 의존성 자동 포함
-    addExtraDependencies("javafx")
+    /* 실행 파일 이름(build/image/bin/아래 생성) */
+    launcher {
+        name = 'TodoProgram'
+    }
 
-    // ✅ module-info.java 없이도 동작하게 "병합 모듈" 생성
+    /* JavaFX 계열 의존을 자동 인식하도록 힌트 제공 (모듈 못 찾음 방지) */
+    addExtraDependencies('javafx')
+
+    /* 소스에 module-info.java가 없을 때, 합쳐진 모듈을 만들어줌 */
     mergedModule {
         additive = true
-        // 우리가 쓰는 모듈들만 requires (필요한 것만)
+
+        // 우리가 실제 사용하는 것만 requires (필요 최소)
         requires 'javafx.base'
         requires 'javafx.graphics'
         requires 'javafx.controls'
+
+        // JDBC 쓰면 java.sql 필요
         requires 'java.sql'
-        // (FXML 안 쓰면 굳이 넣지 않음)
+
+        // FXML을 실제 사용할 때만 주석 해제
         // requires 'javafx.fxml'
     }
+}
+
+/* (선택) gradle run을 써보고 싶다면 JavaFX 경고 회피용으로 daemon 비활성 정도만…
+tasks.named('run') {
+    // 별도 설정 불필요. jlink가 목적이므로 생략 가능.
 }
