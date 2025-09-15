@@ -75,3 +75,4 @@ jlink {
 tasks.named('run') {
     // 별도 설정 불필요. jlink가 목적이므로 생략 가능.
 }
+*/
