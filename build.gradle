@@ -43,20 +43,24 @@ dependencies {
 }
 
 jlink {
-    options = ['--strip-debug','--compress','2','--no-header-files','--no-man-pages']
+    // 실행 파일 이름
     launcher { name = 'TodoProgram' }
 
-    // 🔧 Windows Runner에서 모듈 못 찾는 문제를 예방
+    // 용량 다이어트 옵션(그대로 유지)
+    options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+
+    // ✅ JavaFX 같은 모듈 의존성 자동 포함
     addExtraDependencies("javafx")
 
-    // (선택) 더 확실히: 자동 생성되는 module-info에 필요한 모듈 명시
+    // ✅ module-info.java 없이도 동작하게 "병합 모듈" 생성
     mergedModule {
         additive = true
+        // 우리가 쓰는 모듈들만 requires (필요한 것만)
         requires 'javafx.base'
         requires 'javafx.graphics'
         requires 'javafx.controls'
-        // FXML 사용할 때만
-        // requires 'javafx.fxml'
         requires 'java.sql'
+        // (FXML 안 쓰면 굳이 넣지 않음)
+        // requires 'javafx.fxml'
     }
 }
