@@ -1,7 +1,7 @@
 name: Windows Build (jlink)
 
 on:
-  workflow_dispatch: {}   # 수동 실행 버튼
+  workflow_dispatch:
 
 jobs:
   build-win:
@@ -16,20 +16,19 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
 
-      - name: Gradle permissions
-        run: git update-index --chmod=+x gradlew
+      - name: Verify Java
+        run: java -version
 
-      - name: Build runtime image (jlink)
-        shell: cmd
+      - name: Build jlink image (Windows)
+        shell: bash
         run: |
-          .\gradlew.bat --no-daemon clean jlink
+          ./gradlew.bat --no-daemon clean jlink
 
       - name: Zip runtime image
         shell: pwsh
         run: |
-          cd build
+          Set-Location build
           Compress-Archive -Path image -DestinationPath TodoProgram-windows.zip
 
       - name: Upload artifact

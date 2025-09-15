@@ -1,6 +1,14 @@
 plugins {
     id 'application'
     id 'org.beryx.jlink' version '3.1.1'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
+
+}
+
+javafx {
+    version = "21.0.4"
+    modules = [ 'javafx.base', 'javafx.graphics', 'javafx.controls' ]
+    // FXML 쓰면 'javafx.fxml' 추가
 }
 
 repositories { mavenCentral() }
