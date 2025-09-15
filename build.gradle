@@ -13,7 +13,7 @@ java {
     }
 }
 
-/* ---- JavaFX 버전/플랫폼별 분기 ---- */
+/* ---- JavaFX 버전/플랫폼 분기 ---- */
 ext {
     javafxVer = '21.0.4'
     def os = org.gradle.internal.os.OperatingSystem.current()
@@ -23,34 +23,26 @@ ext {
 }
 
 application {
-    // ⚠️ JavaFX App 엔트리포인트 (쓰는 App.class 경로)
+    // JavaFX 엔트리포인트
     mainClass = 'com.example.organizer.App'
 }
 
-/* ---- 핵심 포인트: JavaFX base/graphics/controls/fxml 네 개 모두 + classifier ---- */
+/* ---- 핵심 포인트: JavaFX base/graphics/controls만 의존 ----
+   (FXML 안 쓰면 fxml 의존 제거해야 Windows jlink가 안 터짐) */
 dependencies {
     implementation "org.openjfx:javafx-base:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-graphics:${javafxVer}:${javafxClassifier}"
     implementation "org.openjfx:javafx-controls:${javafxVer}:${javafxClassifier}"
-    implementation "org.openjfx:javafx-fxml:${javafxVer}:${javafxClassifier}"
+    // FXML을 실제로 안 쓰면 이 줄은 생략 가능
+    // implementation "org.openjfx:javafx-fxml:${javafxVer}:${javafxClassifier}"
 
     implementation "org.xerial:sqlite-jdbc:3.46.0.1"
 }
 
-/* ---- 로컬에서 `./gradlew run` 오류나지 않게 (선택사항, 있어도 무해) ---- */
-tasks.named('run') {
-    // jlink로 배포할 땐 상관없지만, run 시에만 도움
-    jvmArgs += ['-Dprism.order=sw']
-}
-
-/* ---- jlink로 런타임 이미지 + 실행파일 생성 ---- */
 jlink {
     options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    launcher { name = 'TodoProgram' }
 
-    // ⬇️ JavaFX 모듈을 merged module에 자동 포함 (윈도우 액션에서 "module not found" 막아줌)
-    addExtraDependencies('javafx')
-
-    launcher {
-        name = 'TodoProgram'   // 결과 bin/TodoProgram(.exe) 이름
-    }
+    // 🔧 JavaFX 모듈들을 jlink가 자동으로 끌어오게 함
+    addExtraDependencies("javafx")
 }
