@@ -14,6 +14,7 @@ java {
     }
 }
 
+
 /* ── JavaFX 버전 + 플랫폼 분기 ──────────────────────────────────────────────
    mac(aarch64/intel)/win/linux 각각에 맞는 classifier를 자동으로 붙여준다.
    예) mac-aarch64, mac, win, linux */
@@ -68,6 +69,21 @@ jlink {
 
         // FXML을 실제 사용할 때만 주석 해제
         // requires 'javafx.fxml'
+    }
+    jpackage {
+        installerType = 'msi'    // ← 반드시 msi
+        imageName     = 'TodoProgram'
+        installerName = 'TodoProgram-Setup'
+        appVersion    = '1.0.1'
+        vendor        = 'Minchey'
+        // ⬇️ 윈도우 전용 옵션은 여기서!
+        installerOptions = [
+                '--win-menu',                 // 시작 메뉴 등록
+                '--win-shortcut'              // 바탕화면/시작메뉴 바로가기
+                // '--win-dir-chooser',       // (선택) 설치 경로 선택 허용
+                // '--win-menu-group', 'TodoProgram' // (선택) 시작 메뉴 그룹명
+        ]
+        // icon = file('assets/app.ico').absolutePath   // 있으면 사용
     }
 }
 
