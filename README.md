@@ -100,6 +100,8 @@ todoprogram/
 
 ## 📸 스크린샷
 (캘린더, 오늘 할 일 패널, 모달창 스크린샷 추가 가능)
+<img width="1202" height="710" alt="image" src="https://github.com/user-attachments/assets/7da02d69-8360-4adc-b306-25b48c4031d4" />
+
 
 ---
 
