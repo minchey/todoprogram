@@ -1,6 +1,7 @@
 package com.example.organizer;
 
 import java.sql.*;
+import java.io.File;
 
 /**
  * Database 유틸리티 클래스
@@ -10,8 +11,9 @@ import java.sql.*;
  */
 public class Database {
 
+    private static final String DB_URL = "jdbc:sqlite:" + userDbPath();
     // SQLite 파일 경로 (프로젝트 실행 폴더에 todo.db 생성됨)
-    private static final String DB_URL = "jdbc:sqlite:todo.db";
+    //private static final String DB_URL = "jdbc:sqlite:todo.db";
 
     /**
      * DB 연결을 반환하는 메서드
@@ -39,11 +41,13 @@ public class Database {
                     due_at TEXT,                            -- 마감일(단발성 일정용, "YYYY-MM-DD" 또는 datetime)
                     is_recurring INTEGER DEFAULT 0,         -- 반복 여부 (0=단발, 1=반복)
                     next_fire_at TEXT,                      -- 다음 알림 시간 (ISO 문자열)
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP -- 생성 시각
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP, -- 생성 시각
+                    completed INTEGER DEFAULT 0             --  완료 여부(0/1)
                 )
             """);
 
             // 2) 반복업무용 컬럼 보강 (없으면 추가)
+            addColumnIfMissing(conn, "tasks", "completed",     "INTEGER", "0");
             addColumnIfMissing(conn, "tasks", "recur_days",     "INTEGER", "0");   // 요일 비트마스크
             addColumnIfMissing(conn, "tasks", "recur_start",    "TEXT",    null);  // 반복 시작일
             addColumnIfMissing(conn, "tasks", "recur_until",    "TEXT",    null);  // 반복 종료일
@@ -97,4 +101,17 @@ public class Database {
         }
         return false;
     }
+    // Database.java
+    private static String userDbPath() {
+        // Windows: %APPDATA%\TodoProgram\todo.db
+        String appData = System.getenv("APPDATA");
+        String base = (appData != null && !appData.isBlank())
+                ? appData + File.separator + "TodoProgram"
+                : System.getProperty("user.home") + File.separator + ".todoprogram";
+        new File(base).mkdirs();
+        return base + File.separator + "todo.db";
+    }
+
+
+
 }
