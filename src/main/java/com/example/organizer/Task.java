@@ -1,13 +1,29 @@
 package com.example.organizer;
 
-
-//DB 데이터 <-> 자바 코드 변환용 클래스
+/**
+ * DB <-> 자바 변환용 Task 모델
+ * - DB의 INTEGER(0/1) 대신 코드에서는 boolean completed로 다룸
+ */
 public class Task {
-    public int id;          // 고유 ID (PRIMARY KEY)
-    public String title;    // 할 일 제목
-    public int priority;    // 우선순위 (1=High, 2=Medium, 3=Low)
-    public String dueAt;    // 마감 시각 (문자열로 저장: "2025-09-12T09:00")
-    public int isRecurring; // 반복 여부 (0=단발, 1=반복)
-    public String nextFireAt; // 다음 알림 시간
-    public String createdAt;  // 등록된 시간 (DB에서 자동 채워짐)
+    // === DB 컬럼 ===
+    public int id;               // PRIMARY KEY
+    public String title;         // 제목
+    public int priority;         // 1=High, 2=Medium, 3=Low
+    public String dueAt;         // "YYYY-MM-DD" 또는 "YYYY-MM-DD HH:mm"
+    public int isRecurring;      // 0/1
+    public String nextFireAt;    // 다음 알림
+    public String createdAt;     // 생성시각
+    public boolean completed;    // ✅ 완료 여부
+
+    // === UI에서 쓰기 쉬운 헬퍼 ===
+    public int getId() { return id; }
+    public String getTitle() { return title; }
+    public int getPriority() { return priority; }
+    public boolean isCompleted() { return completed; }
+    public void setCompleted(boolean v) { this.completed = v; }
+
+    @Override public String toString() {
+        return String.format("[%s] %s(prio=%d, due=%s, done=%s)",
+                (isRecurring==1?"반복":"단발"), title, priority, dueAt, completed);
+    }
 }
