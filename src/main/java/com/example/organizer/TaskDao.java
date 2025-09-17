@@ -154,7 +154,8 @@ public class TaskDao {
     public List<Task> listByDate(LocalDate date) {
         String ymd = date.toString(); // "YYYY-MM-DD"
         String sql = """
-                    SELECT id, title, priority, due_at, is_recurring, next_fire_at, created_at
+                    SELECT id, title, priority, due_at, is_recurring,
+                           next_fire_at, created_at, completed          -- ✅ 추가
                     FROM tasks
                     WHERE due_at IS NOT NULL AND substr(due_at, 1, 10) = ?
                     ORDER BY priority, due_at
@@ -177,6 +178,7 @@ public class TaskDao {
                     t.isRecurring = rs.getInt("is_recurring");
                     t.nextFireAt = rs.getString("next_fire_at");
                     t.createdAt = rs.getString("created_at");
+                    t.completed = rs.getInt("completed") == 1;
                     out.add(t);
                 }
             }
@@ -272,11 +274,11 @@ public class TaskDao {
 
         // --- 2) INSERT SQL (is_recurring=1, due_at/next_fire_at은 지금은 NULL로 둠) ---
         final String sql = """
-        INSERT INTO tasks
-            (title, priority, is_recurring, recur_days, recur_start, recur_until, recur_interval, due_at, next_fire_at)
-        VALUES
-            (?,     ?,        1,           ?,          ?,          ?,           ?,             NULL,  NULL)
-        """;
+                INSERT INTO tasks
+                    (title, priority, is_recurring, recur_days, recur_start, recur_until, recur_interval, due_at, next_fire_at)
+                VALUES
+                    (?,     ?,        1,           ?,          ?,          ?,           ?,             NULL,  NULL)
+                """;
 
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -313,12 +315,12 @@ public class TaskDao {
      */
     public boolean hasRecurringOn(LocalDate date) {
         String sql = """
-        SELECT COUNT(*) FROM tasks
-        WHERE is_recurring = 1
-          AND (recur_days & ?) != 0            -- 요일 비트가 겹치면 true
-          AND (recur_start IS NULL OR recur_start <= ?)
-          AND (recur_until IS NULL OR recur_until >= ?)
-    """;
+                    SELECT COUNT(*) FROM tasks
+                    WHERE is_recurring = 1
+                      AND (recur_days & ?) != 0            -- 요일 비트가 겹치면 true
+                      AND (recur_start IS NULL OR recur_start <= ?)
+                      AND (recur_until IS NULL OR recur_until >= ?)
+                """;
 
         try (Connection conn = Database.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -344,11 +346,11 @@ public class TaskDao {
 
     /**
      * 특정 날짜(YYYY-MM-DD)에 "반복 업무"가 해당되는 목록을 조회한다.
-     *
+     * <p>
      * 동작 요약
      * 1) 날짜의 요일을 구한다 (Java: 월=1 … 일=7)
      * 2) DB에 저장된 반복 요일 비트마스크(recur_days)와 & 연산으로 일치 여부를 판단
-     *    - 비트 규칙: 일=bit0, 월=bit1, … 토=bit6  (예: 월/수/금 → 0b0101010 = 42)
+     * - 비트 규칙: 일=bit0, 월=bit1, … 토=bit6  (예: 월/수/금 → 0b0101010 = 42)
      * 3) 반복 유효 기간(recur_start ≤ date ≤ recur_until)도 함께 필터링
      * 4) 일치하는 반복 업무들의 최소 필드(id, title, priority, is_recurring)를 Task로 구성해 반환
      *
@@ -381,14 +383,14 @@ public class TaskDao {
         //  - (recur_days & ?) != 0 : 요일 비트가 겹치는(해당 요일에 수행되는) 것만
         //  - 기간 조건: 시작일이 비어있거나 시작일 ≤ date, 종료일이 비어있거나 date ≤ 종료일
         final String sql = """
-        SELECT id, title, priority, is_recurring
-        FROM tasks
-        WHERE is_recurring = 1
-          AND (recur_days & ?) != 0
-          AND (recur_start IS NULL OR recur_start <= ?)
-          AND (recur_until IS NULL OR recur_until >= ?)
-        ORDER BY priority ASC, title ASC
-    """;
+                    SELECT id, title, priority, is_recurring
+                    FROM tasks
+                    WHERE is_recurring = 1
+                      AND (recur_days & ?) != 0
+                      AND (recur_start IS NULL OR recur_start <= ?)
+                      AND (recur_until IS NULL OR recur_until >= ?)
+                    ORDER BY priority ASC, title ASC
+                """;
 
         // (D) DB 연결/실행 -----------------------------------------
         try (Connection conn = Database.getConnection();
@@ -407,9 +409,9 @@ public class TaskDao {
                     Task t = new Task();
 
                     // 필요한 최소 필드만 매핑 (UI에 제목/우선순위/반복태그를 보여주기 위함)
-                    t.id          = rs.getInt("id");
-                    t.title       = rs.getString("title");
-                    t.priority    = rs.getInt("priority");
+                    t.id = rs.getInt("id");
+                    t.title = rs.getString("title");
+                    t.priority = rs.getInt("priority");
                     t.isRecurring = rs.getInt("is_recurring"); // 1 고정
 
                     // 필요하면 여기서 추가 필드도 매핑 가능:
@@ -426,6 +428,86 @@ public class TaskDao {
 
         return out;
     }
+
+    public void updateCompleted(int id, boolean completed) throws SQLException {
+        String sql = "UPDATE tasks SET completed=? WHERE id=?";
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, completed ? 1 : 0);
+            ps.setInt(2, id);
+            ps.executeUpdate();
+        }
+    }
+
+    // ✅ 달력용: 날짜별 [완료, 미완료] 카운트
+    public Map<LocalDate, int[]> getDailyDoneTodoCounts(YearMonth ym) {
+        String ymPrefix = ym.toString(); // "YYYY-MM"
+
+        String sql = """
+                    SELECT substr(due_at,1,10) AS ymd,
+                           SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) AS doneCnt,
+                           SUM(CASE WHEN completed = 0 THEN 1 ELSE 0 END) AS todoCnt
+                    FROM tasks
+                    WHERE due_at LIKE ? || '%'
+                    GROUP BY ymd
+                """;
+
+        Map<LocalDate, int[]> map = new HashMap<>();
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, ymPrefix);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    LocalDate date = LocalDate.parse(rs.getString("ymd"));
+                    int done = rs.getInt("doneCnt");
+                    int todo = rs.getInt("todoCnt");
+                    map.put(date, new int[]{done, todo}); // [완료, 미완료]
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return map;
+    }
+
+    // ✅ 오늘(또는 인자로 준 날짜)까지 마감인 단발 일정만 가져오기
+    public List<Task> listDueUntil(LocalDate until, boolean onlyUncompleted) {
+        String ymd = until.toString(); // "YYYY-MM-DD"
+        String sql = """
+                SELECT id, title, priority, due_at, is_recurring, next_fire_at, created_at, completed
+                FROM tasks
+                WHERE is_recurring = 0
+                  AND due_at IS NOT NULL
+                  AND substr(due_at, 1, 10) <= ?
+                """ + (onlyUncompleted ? " AND completed = 0 " : "") + """
+                    ORDER BY substr(due_at, 1, 10) ASC, priority ASC
+                """;
+
+        List<Task> out = new ArrayList<>();
+        try (Connection conn = Database.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, ymd);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Task t = new Task();
+                    t.id = rs.getInt("id");
+                    t.title = rs.getString("title");
+                    t.priority = rs.getInt("priority");
+                    t.dueAt = rs.getString("due_at");
+                    t.isRecurring = rs.getInt("is_recurring");
+                    t.nextFireAt = rs.getString("next_fire_at");
+                    t.createdAt = rs.getString("created_at");
+                    t.completed = rs.getInt("completed") == 1;
+                    out.add(t);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return out;
+    }
+
 
 }
 
